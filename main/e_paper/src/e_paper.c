@@ -1,6 +1,3 @@
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-
 #include "e_paper/e_paper.h"
 
 
@@ -21,12 +18,21 @@ void e_paper_wait_busy(uint8_t wait_for_busy) {
     }
 }
 
-void e_paper_set_resolution(e_paper_handle_t* display) {
+void e_paper_pre_image_commands(e_paper_handle_t* display) {
     e_paper_send_cmd(display, 0x61);
     e_paper_send_data(display, 0x02);
     e_paper_send_data(display, 0x58);
     e_paper_send_data(display, 0x01);
     e_paper_send_data(display, 0xC0);
+}
+
+void e_paper_post_image_commands(e_paper_handle_t* display) {
+    e_paper_send_cmd(display, 0x04);
+    e_paper_wait_busy(BUSY_HIGH);
+    e_paper_send_cmd(display, 0x12);
+    e_paper_wait_busy(BUSY_HIGH);
+    e_paper_send_cmd(display, 0x02); 
+    e_paper_wait_busy(BUSY_LOW);
 }
 
 void e_paper_init(e_paper_handle_t* display) {
@@ -67,7 +73,7 @@ void e_paper_init(e_paper_handle_t* display) {
     e_paper_send_cmd(display, 0x60);
     e_paper_send_data(display, 0x22);
     
-    e_paper_set_resolution(display);
+    e_paper_pre_image_commands(display);
     
     e_paper_send_cmd(display, 0xE3);
     e_paper_send_data(display, 0xAA);
@@ -86,20 +92,31 @@ void e_paper_reset() {
 }
 
 void e_paper_clear(e_paper_handle_t* display, uint8_t color) {
-    e_paper_set_resolution(display);
-
+    e_paper_pre_image_commands(display);
     e_paper_send_cmd(display, 0x10);
+    
     for(int i=0; i<display->width/2; i++) {
         for(int j=0; j<display->height; j++) {
             e_paper_send_data(display, (color<<4)|color);
 		}
 	}
 
-    e_paper_send_cmd(display, 0x04);
-    e_paper_wait_busy(BUSY_HIGH);
-    e_paper_send_cmd(display, 0x12);
-    e_paper_wait_busy(BUSY_HIGH);
-    e_paper_send_cmd(display, 0x02); 
-    e_paper_wait_busy(BUSY_LOW);
+    e_paper_post_image_commands(display);
     vTaskDelay(500 / portTICK_RATE_MS);
+}
+
+
+void e_paper_draw(e_paper_handle_t* display, const image_handle_t* image) {
+    e_paper_pre_image_commands(display);
+    e_paper_send_cmd(display, 0x10);
+
+    const unsigned long WIDTH_2 = display->width/2;
+    for(unsigned long y = 0; y < image->height; y++) {
+        for(unsigned long x = 0; x < WIDTH_2; x++) {
+            e_paper_send_data(display, image->data[x + y * WIDTH_2]);
+		}
+    }
+
+    e_paper_post_image_commands(display);
+	vTaskDelay(200 / portTICK_RATE_MS);
 }

@@ -1,6 +1,9 @@
 #ifndef _E_PAPER_H_
 #define _E_PAPER_H_
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 #include "e_paper/e_paper_interface.h"
 
 // Busy wait 
@@ -49,7 +52,9 @@ void e_paper_draw(e_paper_handle_t* display, const image_handle_t* image);
 
 void e_paper_draw_at(e_paper_handle_t* display, const image_handle_t* image, int x, int y);
 
-void e_paper_set_resolution(e_paper_handle_t* display);
+void e_paper_pre_image_commands(e_paper_handle_t* display);
+
+void e_paper_post_image_commands(e_paper_handle_t* display);
 
 void e_paper_clear(e_paper_handle_t* display, uint8_t color);
 
